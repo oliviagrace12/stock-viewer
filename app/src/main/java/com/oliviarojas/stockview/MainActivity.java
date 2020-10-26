@@ -4,6 +4,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.os.Bundle;
 import android.view.Menu;
@@ -13,11 +14,13 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener {
 
     private StockViewAdapter stockViewAdapter;
     private RecyclerView recyclerView;
+    private SwipeRefreshLayout swiper;
     private List<Stock> stocks = new ArrayList<>();
 
     @Override
@@ -33,14 +36,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         stocks.add(new Stock("OLI", "Olivia Company", 115.78, -2.3, -.15));
         stocks.add(new Stock("ARM", "Armando Company", 130.6, 1.9, .23));
         stockViewAdapter.notifyDataSetChanged();
+
+        swiper = findViewById(R.id.swiper);
+        swiper.setOnRefreshListener(() -> {
+            doRefresh();
+            swiper.setRefreshing(false);
+        });
     }
 
-    //    @Override
-//    public boolean onCreateOptionsMenu(Menu menu) {
-//        getMenuInflater().inflate(R.menu.main_menu, menu);
-//        return super.onCreateOptionsMenu(menu);
-//    }
-//
+    public void doRefresh() {
+        Toast.makeText(this, "Refreshing...", Toast.LENGTH_SHORT).show();
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_menu, menu);
