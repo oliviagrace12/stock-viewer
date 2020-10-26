@@ -6,6 +6,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
@@ -33,14 +35,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         stockViewAdapter.notifyDataSetChanged();
     }
 
+    //    @Override
+//    public boolean onCreateOptionsMenu(Menu menu) {
+//        getMenuInflater().inflate(R.menu.main_menu, menu);
+//        return super.onCreateOptionsMenu(menu);
+//    }
+//
     @Override
-    public void onClick(View v) {
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        Toast.makeText(this, "Add new stock", Toast.LENGTH_SHORT).show();
+        return true;
+    }
+
+    @Override
+    public void onClick(View view) {
         Toast.makeText(this, "Stock selected", Toast.LENGTH_SHORT).show();
     }
 
     @Override
-    public boolean onLongClick(View v) {
-        int position = recyclerView.getChildLayoutPosition(v);
+    public boolean onLongClick(View view) {
+        int position = recyclerView.getChildLayoutPosition(view);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setIcon(R.drawable.baseline_delete_black_18dp);
@@ -48,7 +68,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             stocks.remove(position);
             stockViewAdapter.notifyDataSetChanged();
         });
-        builder.setNegativeButton("CANCEL", (dialog, id) -> {});
+        builder.setNegativeButton("CANCEL", (dialog, id) -> {
+        });
         builder.setMessage("Delete stock " + stocks.get(position).getSymbol() + "?");
         builder.setTitle("Delete Stock");
         AlertDialog dialog = builder.create();
