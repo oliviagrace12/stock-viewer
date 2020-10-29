@@ -4,7 +4,7 @@
 
     <item
         android:id="@+id/addStockMenuItem"
-        android:icon="@android:drawable/ic_menu_add"
+        android:icon="@drawable/baseline_addchart_white_36dp"
         android:title="@string/add_stock"
         app:showAsAction="ifRoom" />
 </menu>

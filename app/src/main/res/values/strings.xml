@@ -6,4 +6,6 @@
     <string name="change">Change</string>
     <string name="comany_name">Comany Name</string>
     <string name="add_stock">Add Stock</string>
+    <string name="file_name">saved-stocks.json</string>
+    <string name="encoding">UTF-8</string>
 </resources>

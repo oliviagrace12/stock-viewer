@@ -16,6 +16,9 @@ public class Stock {
         this.changePercent = changePercent;
     }
 
+    public Stock() {
+    }
+
     public String getSymbol() {
         return symbol;
     }
