@@ -71,6 +71,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void doRefresh() {
         if (!isConnectedToNetwork()) {
             showNoNetworkDialogue("Cannot refresh data");
+            swiper.setRefreshing(false);
         } else {
             new Thread(new StocksDataRefresher(this, stocks)).start();
         }
