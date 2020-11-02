@@ -54,21 +54,21 @@ public class StockInfoDownloader implements Runnable {
             return;
         }
 
-        process(sb.toString());
+        try {
+            process(sb.toString());
+        } catch (JSONException e) {
+            Log.w(TAG, "run: Could not process json: " + sb.toString());
+        }
     }
 
-    private void process(String stockJson) {
+    private void process(String stockJson) throws JSONException {
         Stock stock = new Stock();
-        try {
-            JSONObject jsonObject = new JSONObject(stockJson);
-            stock.setSymbol(jsonObject.getString("symbol"));
-            stock.setCompanyName(jsonObject.getString("companyName"));
-            stock.setLatestPrice(jsonObject.getDouble("latestPrice"));
-            stock.setChange(jsonObject.getDouble("change"));
-            stock.setChangePercent(jsonObject.getDouble("changePercent"));
-        } catch (JSONException e) {
-            Log.e(TAG, "Could not process stock json response: " + stockJson, null);
-        }
+        JSONObject jsonObject = new JSONObject(stockJson);
+        stock.setSymbol(jsonObject.getString("symbol"));
+        stock.setCompanyName(jsonObject.optString("companyName"));
+        stock.setLatestPrice(jsonObject.optDouble("latestPrice", 0));
+        stock.setChange(jsonObject.optDouble("change", 0));
+        stock.setChangePercent(jsonObject.optDouble("changePercent", 0));
 
         mainActivity.runOnUiThread(new Runnable() {
             @Override

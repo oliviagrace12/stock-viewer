@@ -1,6 +1,5 @@
 package com.oliviarojas.stockview;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -9,7 +8,6 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
@@ -34,9 +32,7 @@ import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener {
 
@@ -45,6 +41,51 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private RecyclerView recyclerView;
     private SwipeRefreshLayout swiper;
     private List<Stock> stocks = new ArrayList<>();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        if (!isConnectedToNetwork()) {
+            showNoNetworkDialogue("Data cannot be retrieved");
+        }
+
+        recyclerView = findViewById(R.id.recyclerView);
+        stockViewAdapter = new StockViewAdapter(stocks, this);
+        recyclerView.setAdapter(stockViewAdapter);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        loadSavedStocks();
+        stockViewAdapter.notifyDataSetChanged();
+
+        swiper = findViewById(R.id.swiper);
+        swiper.setOnRefreshListener(() -> {
+            doRefresh();
+        });
+
+        SymbolNameDownloader symbolNameDownloader = new SymbolNameDownloader();
+        new Thread(symbolNameDownloader).start();
+    }
+
+    private void doRefresh() {
+        if (!isConnectedToNetwork()) {
+            showNoNetworkDialogue("Cannot refresh data");
+        } else {
+            new Thread(new StocksDataRefresher(this, stocks)).start();
+        }
+    }
+
+    public void finishedRefreshing() {
+        swiper.setRefreshing(false);
+    }
+
+    public void replaceStocks(List<Stock> refreshedStocks) {
+        stocks.clear();
+        stocks.addAll(refreshedStocks);
+        sortStocks();
+        stockViewAdapter.notifyDataSetChanged();
+    }
 
     public void addStock(Stock stock) {
         if (stock == null) {
@@ -64,45 +105,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         stocks.add(stock);
         sortStocks();
         stockViewAdapter.notifyDataSetChanged();
-    }
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        recyclerView = findViewById(R.id.recyclerView);
-        stockViewAdapter = new StockViewAdapter(stocks, this);
-        recyclerView.setAdapter(stockViewAdapter);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-
-
-//        stocks.add(new Stock("OLI", "Olivia Company", 115.78, -2.3, -.15));
-//        stocks.add(new Stock("ARM", "Armando Company", 130.6, 1.9, .23));
-//        stocks.add(new Stock("OLI1", "Olivia Company", 115.78, -2.3, -.15));
-//        stocks.add(new Stock("ARM1", "Armando Company", 130.6, 1.9, .23));
-//        stocks.add(new Stock("OLI2", "Olivia Company", 115.78, -2.3, -.15));
-//        stocks.add(new Stock("ARM2", "Armando Company", 130.6, 1.9, .23));
-//        stocks.add(new Stock("OLI1", "Olivia Company", 115.78, -2.3, -.15));
-//        stocks.add(new Stock("ARM1", "Armando Company", 130.6, 1.9, .23));
-//        stocks.add(new Stock("OLI2", "Olivia Company", 115.78, -2.3, -.15));
-//        stocks.add(new Stock("ARM2", "Armando Company", 130.6, 1.9, .23));
-
-        loadSavedStocks();
-        stockViewAdapter.notifyDataSetChanged();
-
-        swiper = findViewById(R.id.swiper);
-        swiper.setOnRefreshListener(() -> {
-            doRefresh();
-            swiper.setRefreshing(false);
-        });
-
-        SymbolNameDownloader symbolNameDownloader = new SymbolNameDownloader();
-        new Thread(symbolNameDownloader).start();
-    }
-
-    public void doRefresh() {
-        Toast.makeText(this, "Refreshing...", Toast.LENGTH_SHORT).show();
     }
 
     private void loadSavedStocks() {
@@ -149,7 +151,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (isConnectedToNetwork()) {
             showStockSearchDialogue();
         } else {
-            showNoNetworkDialogue();
+            showNoNetworkDialogue("Stock cannot be added without a network connection");
         }
         return true;
     }
@@ -174,10 +176,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         dialog.show();
     }
 
-    private void showNoNetworkDialogue() {
+    private void showNoNetworkDialogue(String message) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("No Network Connection");
-        builder.setMessage("Stock cannot be added without a network connection");
+        builder.setMessage(message);
         AlertDialog dialog = builder.create();
         dialog.show();
     }
@@ -215,12 +217,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Choose your stock");
-//        builder.setIcon(R.drawable.icon2);
+        builder.setIcon(R.drawable.baseline_assessment_black_36dp);
         builder.setItems(matchesArray, (dialog, which) -> {
             addNewStock(matchesArray[which]);
         });
         builder.setNegativeButton("Nevermind", (dialog, id) -> {
-            Toast.makeText(MainActivity.this, "You changed your mind!", Toast.LENGTH_SHORT).show();
         });
 
         AlertDialog dialog = builder.create();
