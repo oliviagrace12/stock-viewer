@@ -87,7 +87,8 @@ public class SymbolNameDownloader implements Runnable {
 
         for (String sym : symbolNameMap.keySet()) {
             if (sym.toLowerCase().trim().contains(strToMatch)) {
-                matchSet.add(sym + " - " + symbolNameMap.get(sym));
+                matchSet.add(sym + " - " +
+                        symbolNameMap.get(sym));
             }
             String name = symbolNameMap.get(sym);
             if (name != null &&

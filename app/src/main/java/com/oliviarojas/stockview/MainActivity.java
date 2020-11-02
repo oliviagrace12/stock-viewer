@@ -10,6 +10,8 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.util.JsonWriter;
 import android.util.Log;
@@ -44,6 +46,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private SwipeRefreshLayout swiper;
     private List<Stock> stocks = new ArrayList<>();
 
+    public void addStock(Stock stock) {
+        if (stock == null) {
+            Log.w(TAG, "addStock: Cannot add null stock", null);
+            return;
+        }
+
+        if (stocks.contains(stock)) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Duplicate Stock");
+            builder.setMessage("Existing stock cannot be re-added");
+            AlertDialog dialog = builder.create();
+            dialog.show();
+            return;
+        }
+
+        stocks.add(stock);
+        sortStocks();
+        stockViewAdapter.notifyDataSetChanged();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -54,9 +76,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         recyclerView.setAdapter(stockViewAdapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        stocks.add(new Stock("OLI", "Olivia Company", 115.78, -2.3, -.15));
-        stocks.add(new Stock("ARM", "Armando Company", 130.6, 1.9, .23));
-        // loadSavedStocks();
+
+//        stocks.add(new Stock("OLI", "Olivia Company", 115.78, -2.3, -.15));
+//        stocks.add(new Stock("ARM", "Armando Company", 130.6, 1.9, .23));
+//        stocks.add(new Stock("OLI1", "Olivia Company", 115.78, -2.3, -.15));
+//        stocks.add(new Stock("ARM1", "Armando Company", 130.6, 1.9, .23));
+//        stocks.add(new Stock("OLI2", "Olivia Company", 115.78, -2.3, -.15));
+//        stocks.add(new Stock("ARM2", "Armando Company", 130.6, 1.9, .23));
+//        stocks.add(new Stock("OLI1", "Olivia Company", 115.78, -2.3, -.15));
+//        stocks.add(new Stock("ARM1", "Armando Company", 130.6, 1.9, .23));
+//        stocks.add(new Stock("OLI2", "Olivia Company", 115.78, -2.3, -.15));
+//        stocks.add(new Stock("ARM2", "Armando Company", 130.6, 1.9, .23));
+
+        loadSavedStocks();
         stockViewAdapter.notifyDataSetChanged();
 
         swiper = findViewById(R.id.swiper);
@@ -65,8 +97,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             swiper.setRefreshing(false);
         });
 
-        SymbolNameDownloader rd = new SymbolNameDownloader();
-        new Thread(rd).start();
+        SymbolNameDownloader symbolNameDownloader = new SymbolNameDownloader();
+        new Thread(symbolNameDownloader).start();
     }
 
     public void doRefresh() {
@@ -93,12 +125,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 stock.setLatestPrice(stockJson.getDouble("latestPrice"));
                 stock.setChange(stockJson.getDouble("change"));
                 stock.setChangePercent(stockJson.getDouble("changePercent"));
+                stocks.add(stock);
             }
         } catch (Exception e) {
             Log.e(TAG, "loadSavedNotes: ", e);
         }
+        sortStocks();
+        stockViewAdapter.notifyDataSetChanged();
     }
 
+    private void sortStocks() {
+        stocks.sort((s1, s2) -> s1.getSymbol().compareTo(s2.getSymbol()));
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -108,6 +146,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        if (isConnectedToNetwork()) {
+            showStockSearchDialogue();
+        } else {
+            showNoNetworkDialogue();
+        }
+        return true;
+    }
+
+    private void showStockSearchDialogue() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage("Please enter the stock you want to add");
         builder.setTitle("New Stock");
@@ -125,15 +172,59 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         AlertDialog dialog = builder.create();
         dialog.show();
-        return true;
     }
 
+    private void showNoNetworkDialogue() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("No Network Connection");
+        builder.setMessage("Stock cannot be added without a network connection");
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private boolean isConnectedToNetwork() {
+        ConnectivityManager cm =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnectedOrConnecting();
+    }
+
+
     private void handleNewStock(EditText editText) {
-        String newStockName = editText.getText().toString();
-        if (newStockName.isEmpty()) {
+        String searchTerm = editText.getText().toString();
+        if (searchTerm.isEmpty()) {
             return;
         }
-        Toast.makeText(this, "You searched for " + newStockName, Toast.LENGTH_SHORT).show();
+        List<String> matches = SymbolNameDownloader.findMatches(searchTerm);
+        if (matches.size() == 0) {
+            Toast.makeText(this, "No stocks found for " + searchTerm, Toast.LENGTH_SHORT).show();
+        } else if (matches.size() == 1) {
+            addNewStock(matches.get(0));
+        } else {
+            haveUserChooseStock(matches);
+        }
+    }
+
+    private void addNewStock(String stockSymbolAndName) {
+        String stockSymbol = stockSymbolAndName.split(" ")[0];
+        new Thread(new StockInfoDownloader(this, stockSymbol)).start();
+    }
+
+    private void haveUserChooseStock(List<String> matches) {
+        String[] matchesArray = matches.toArray(new String[0]);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Choose your stock");
+//        builder.setIcon(R.drawable.icon2);
+        builder.setItems(matchesArray, (dialog, which) -> {
+            addNewStock(matchesArray[which]);
+        });
+        builder.setNegativeButton("Nevermind", (dialog, id) -> {
+            Toast.makeText(MainActivity.this, "You changed your mind!", Toast.LENGTH_SHORT).show();
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     @Override

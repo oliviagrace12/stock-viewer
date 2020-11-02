@@ -1,5 +1,7 @@
 package com.oliviarojas.stockview;
 
+import java.util.Objects;
+
 public class Stock {
 
     private String symbol;
@@ -57,5 +59,19 @@ public class Stock {
 
     public void setChangePercent(Double changePercent) {
         this.changePercent = changePercent;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Stock stock = (Stock) o;
+        return Objects.equals(symbol, stock.symbol) &&
+                Objects.equals(companyName, stock.companyName);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(symbol, companyName);
     }
 }
